@@ -1,0 +1,71 @@
+
+/*
+A Reaper JS plugin (MIDI effect).
+
+MIDI Note Remapper:
+Transform one midi note number to another.
+
+Written in 2013 by Alexander Shaduri <ashaduri 'at' gmail.com>
+Version 1.0.0 (First public release)
+
+Copyright:
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any warranty.
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software. If not, see:
+http://creativecommons.org/publicdomain/zero/1.0/
+*/
+
+
+desc: MIDI note mapper
+
+slider1:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input Channel:
+slider2:0<0,127,1>Input note:
+slider3:0<0,127,1>Output note:
+
+// MIDI-only FX should always have these lines for optimization
+in_pin:none
+out_pin:none
+
+
+@init
+
+MSG_NOTE_OFF = 8 * 16;
+MSG_NOTE_ON   = 9 * 16;
+
+@slider
+
+user_in_channel = slider1-1;
+user_in_note = slider2;
+user_out_note = slider3;
+
+
+@block
+
+while (
+  midirecv(offset,msg1,msg23) ? (
+    channel = msg1 & 15;  // Low four bits is channel number (15 == 00001111)
+
+    // Is it on our channel or are we using all channels?
+    (channel == user_in_channel || user_in_channel == -1) ? (
+      msg_type = msg1 & 240;  // High four bits is message type (240 == 11110000)
+
+      // If this is a note event, check and transform it
+      (msg_type == MSG_NOTE_ON || msg_type == MSG_NOTE_OFF) ? (
+        note = msg23 & 127;
+
+        (note == user_in_note) ? (
+          velocity = (msg23 / 256) | 0;
+          msg23 = user_out_note | (velocity * 256);
+        );
+      );
+    );
+
+    midisend(offset,msg1,msg23);  // Send the data
+  );
+);
+
+
+
+

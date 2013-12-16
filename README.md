@@ -1,4 +1,4 @@
 reaper_plugins
 ==============
 
-Various Reaper plugins
+Various Cockos Reaper plugins
