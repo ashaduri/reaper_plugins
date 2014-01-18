@@ -12,7 +12,9 @@ High- and low-volume notes may be specified explicitly if the former
 is most likely to trigger the latter.
 
 Written in 2014 by Alexander Shaduri <ashaduri 'at' gmail.com>
-Version 1.0.0 (First public release)
+
+Changelog:
+  1.0.0 - First public release.
 
 Copyright:
 To the extent possible under law, the author(s) have dedicated all

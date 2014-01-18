@@ -10,7 +10,10 @@ This is useful for transforming variable hi-hat controller messages
 with a single hi-hat note into two (open, closed) hi-hat notes.
 
 Written in 2013 - 2014 by Alexander Shaduri <ashaduri 'at' gmail.com>
-Version 1.0.0 (First public release)
+
+Changelog:
+  1.0.1 - Tweaked plugin UI.
+  1.0.0 - First public release.
 
 Copyright:
 To the extent possible under law, the author(s) have dedicated all
