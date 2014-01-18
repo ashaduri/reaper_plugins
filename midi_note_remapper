@@ -3,9 +3,9 @@
 A Reaper JS plugin (MIDI effect).
 
 MIDI Note Remapper:
-Transform one midi note number to another.
+Transform one MIDI note number into another.
 
-Written in 2013 by Alexander Shaduri <ashaduri 'at' gmail.com>
+Written in 2013-2014 by Alexander Shaduri <ashaduri 'at' gmail.com>
 Version 1.0.0 (First public release)
 
 Copyright:
@@ -18,9 +18,9 @@ http://creativecommons.org/publicdomain/zero/1.0/
 */
 
 
-desc: MIDI note mapper
+desc: MIDI note remapper
 
-slider1:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input Channel:
+slider1:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input channel:
 slider2:0<0,127,1>Input note:
 slider3:0<0,127,1>Output note:
 
@@ -63,6 +63,7 @@ while (
     );
 
     midisend(offset,msg1,msg23);  // Send the data
+    1; // Continue until all messages are processed
   );
 );
 

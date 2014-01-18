@@ -1,0 +1,121 @@
+
+/*
+A Reaper JS plugin (MIDI effect).
+
+MIDI Crosstalk Fixer:
+The plugin cancels any low-volume MIDI Note On and Note Off messages
+that come right after a high-volume other note Note On message (within
+a specific time period). This is useful when mixing various drum MIDI
+sources (e.g. several modules) which don't have shared crosstalk
+cancellation support.
+High- and low-volume notes may be specified explicitly if the former
+is most likely to trigger the latter.
+
+Written in 2014 by Alexander Shaduri <ashaduri 'at' gmail.com>
+Version 1.0.0 (First public release)
+
+Copyright:
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any warranty.
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software. If not, see:
+http://creativecommons.org/publicdomain/zero/1.0/
+*/
+
+
+desc: MIDI cross-talk fixer
+
+slider1:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input MIDI channel:
+slider2:-1<-1,127,1>High-vol. note (-1: any):
+slider3:-1<-1,127,1>Extra high-vol. note 1 (-1: disable):
+slider4:-1<-1,127,1>Extra high-vol. note 2 (-1: disable):
+slider5:-1<-1,127,1>Low-vol. note (-1: any):
+slider6:-1<-1,127,1>Extra low-vol. note 1 (-1: to disable):
+slider7:-1<-1,127,1>Extra low-vol. note 2 (-1: to disable):
+slider8:100<0,127,1>Min. high note volume:
+slider9:10<0,127,1>Max. low note volume:
+slider10:0<0,1000,1>Max. delay amount (ms):
+slider11:0<0,40000,1>Max. additional delay (samples):
+
+
+// MIDI-only FX should always have these lines for optimization
+in_pin:none
+out_pin:none
+
+
+@init
+
+MSG_NOTE_OFF = 8 * 16;
+MSG_NOTE_ON   = 9 * 16;
+
+
+@slider
+
+user_in_channel = slider1-1;
+user_high_volume_note1 = slider2;
+user_high_volume_note2 = slider3;
+user_high_volume_note3 = slider4;
+user_low_volume_note1 = slider5;
+user_low_volume_note2 = slider6;
+user_low_volume_note3 = slider7;
+user_min_high_volume= slider8;
+user_max_low_volume= slider9;
+user_delay_ms= slider10;
+user_delay_samples = slider11;
+
+delaylen = (user_delay_ms * srate * 0.001 + user_delay_samples) | 0;
+
+
+@block
+
+timer > 0 ? timer -= samplesblock;
+
+
+while (
+  midirecv(offset,msg1,msg23) ? (
+    channel = msg1 & 15;  // Low four bits is channel number (15 == 00001111)
+
+    // Is it on our channel or are we using all channels?
+    (channel == user_in_channel || user_in_channel == -1) ? (
+      msg_type = msg1 & 240;  // High four bits is message type (240 == 11110000)
+
+      block_sending = 0;
+      high_note_matched = 0;
+
+      // If this is a high note event, store its time
+      (msg_type == MSG_NOTE_ON) ? (
+        note = msg23 & 127;
+        (note == user_high_volume_note1 || user_high_volume_note1 == -1
+            || note == user_high_volume_note2 || note == user_high_volume_note3) ? (
+          velocity = (msg23 / 256) | 0;
+          (velocity >= user_min_high_volume) ? (
+            timer = delaylen - (samplesblock - offset);
+            high_note_matched = 1;
+          );
+        );
+      );
+
+      // Maybe we should leave Note Off alone, since there may be
+      // an (On, On, Off, Off) situation.
+      (!high_note_matched && msg_type == MSG_NOTE_ON) ? (  //  || msg_type == MSG_NOTE_OFF
+        (note == user_low_volume_note1 || user_low_volume_note1 == -1
+            || note == user_low_volume_note2 || note == user_low_volume_note3) ? (
+          velocity = (msg23 / 256) | 0;
+          (velocity <= user_max_low_volume && (timer - offset) >= 1) ? (
+            block_sending=1;
+          );
+        );
+      );
+    );
+
+    (!block_sending) ? (
+      midisend(offset,msg1,msg23);  // Send the data
+    );
+    1; // Continue until all messages are processed
+  );
+);
+
+
+
+

@@ -2,12 +2,14 @@
 /*
 A Reaper JS plugin (MIDI effect).
 
-MIDI note splitter by CC:
-Transform a midi note number to 2 other numbers depending on previously received CC value.
-This is useful for transforming variable hi-hat controller messages with a single hi-hat note
-to hi-hat open/closed notes.
+MIDI Note Splitter by CC:
+Transform a MIDI note number into two note numbers depending
+on whether a previously received CC value is higher or lower
+than user-defined threshold.
+This is useful for transforming variable hi-hat controller messages
+with a single hi-hat note into two (open, closed) hi-hat notes.
 
-Written in 2013 by Alexander Shaduri <ashaduri 'at' gmail.com>
+Written in 2013 - 2014 by Alexander Shaduri <ashaduri 'at' gmail.com>
 Version 1.0.0 (First public release)
 
 Copyright:
@@ -20,15 +22,15 @@ http://creativecommons.org/publicdomain/zero/1.0/
 */
 
 
-desc: Split notes by CC
+desc: Split MIDI notes by CC
 
-slider1:4<0,128,1>CC Controller:
-slider2:65<0,128,1>Use small note for CC value less than:
+slider1:4<0,128,1>CC controller:
+slider2:65<0,128,1>Use low note if CC value less than:
 
 slider3:0<0,127,1>Input note:
-slider4:0<0,127,1>Small note:
-slider5:0<0,127,1>Large note:
-slider6:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input Channel:
+slider4:0<0,127,1>Low CC-triggered note:
+slider5:0<0,127,1>High CC-triggered note:
+slider6:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input channel:
 
 // MIDI-only FX should always have these lines for optimization
 in_pin:none
@@ -40,6 +42,8 @@ out_pin:none
 MSG_NOTE_OFF = 8 * 16;
 MSG_NOTE_ON   = 9 * 16;
 MSG_CC = 11 * 16;
+
+last_cc_value = 127;
 
 
 @slider
@@ -53,8 +57,6 @@ user_in_channel = slider6-1;
 
 
 @block
-
-//last_cc_value = 127;
 
 while (
   midirecv(offset,msg1,msg23) ? (
@@ -89,6 +91,7 @@ while (
     );
 
     midisend(offset,msg1,msg23);  // Send the data
+    1; // Continue until all messages are processed
   );
 );
 
