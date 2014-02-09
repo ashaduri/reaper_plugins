@@ -1,0 +1,101 @@
+
+/*
+A Reaper JS plugin (MIDI effect).
+
+MIDI Note Splitter by velocity:
+Transform a MIDI note number into two note numbers depending
+on whether the Note On's velocity is higher or lower than user-defined threshold.
+This is useful for transforming snare rim message to sidestick or rimshot.
+Note that unlike the usual approach, we apply the transformation to Note Off
+message based on Note On velocity, since drums tend to send all Note Off messages
+with velocity 64.
+
+Written in 2014 by Alexander Shaduri <ashaduri 'at' gmail.com>
+
+Changelog:
+  1.0.0 - First public release.
+
+Copyright:
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any warranty.
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software. If not, see:
+http://creativecommons.org/publicdomain/zero/1.0/
+*/
+
+
+desc: Split MIDI notes by velocity
+
+slider1:65<0,128,1>Use low note if velocity less than:
+
+slider2:0<0,127,1>Input note:
+slider3:0<0,127,1>Low velocity-triggered note:
+slider4:0<0,127,1>High velocity-triggered note:
+slider5:0<0,16,1{Any,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>Input channel:
+
+// MIDI-only FX should always have these lines for optimization
+in_pin:none
+out_pin:none
+
+
+@init
+
+MSG_NOTE_OFF = 8 * 16;
+MSG_NOTE_ON   = 9 * 16;
+
+last_velocity_value = 127;
+
+
+@slider
+
+user_border_velocity_value = slider1;
+user_in_note = slider2;
+user_out_small = slider3;
+user_out_large = slider4;
+user_in_channel = slider5-1;
+
+
+@block
+
+while (
+  midirecv(offset,msg1,msg23) ? (
+    channel = msg1 & 15;  // Low four bits is channel number (15 == 00001111)
+
+    // Is it on our channel or are we using all channels?
+    (channel == user_in_channel || user_in_channel == -1) ? (
+      msg_type = msg1 & 240;  // High four bits is message type (240 == 11110000)
+
+      // If this is a note event, check and transform it
+      (msg_type == MSG_NOTE_ON || msg_type == MSG_NOTE_OFF) ? (
+        note = msg23 & 127;
+
+        (note == user_in_note) ? (
+          velocity = (msg23 / 256) | 0;
+
+          (msg_type == MSG_NOTE_ON) ? (
+            last_velocity_value = velocity;
+            match_velocity = velocity;
+          ) : (
+            match_velocity = last_velocity_value;
+          );
+
+          (match_velocity < user_border_velocity_value) ? (
+            note = user_out_small;
+          ) : (
+            note = user_out_large;
+          );
+          //modified_note = note;
+          msg23 = note | (velocity * 256);
+        );
+      );
+    );
+
+    midisend(offset,msg1,msg23);  // Send the data
+    1; // Continue until all messages are processed
+  );
+);
+
+
+
+
